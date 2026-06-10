@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Reported Jobs{% endblock %}
+
+{% block content %}
+<div class="page-enter">
+  <div class="page-header">
+    <div class="section-eyebrow">Community Intelligence</div>
+    <h1 class="page-title">Reported <span class="accent-text">Fraudulent Jobs</span></h1>
+    <p class="page-sub">Jobs flagged as suspicious by users of this system.</p>
+  </div>
+
+  <div class="reports-toolbar">
+    <div class="rt-stat">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+      <strong>{{ count }}</strong> total reports
+    </div>
+    {% if count > 0 %}
+    <a href="/api/download-reports" class="btn-outline-sm">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Download CSV
+    </a>
+    {% endif %}
+  </div>
+
+  {% if count == 0 %}
+  <div class="empty-state">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#0d2240" stroke-width="1"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+    <div class="es-text">No jobs reported yet</div>
+    <div class="es-sub">Use the Analyzer to flag suspicious listings</div>
+  </div>
+  {% else %}
+
+  <div class="filter-row">
+    <input type="text" id="searchBox" class="text-input" placeholder="Search by title or company..." oninput="filterReports()"/>
+    <select id="verdictFilter" class="select-input" onchange="filterReports()">
+      <option value="">All Verdicts</option>
+      {% set verdicts = reports | map(attribute='verdict') | unique | list %}
+      {% for v in verdicts %}<option>{{ v }}</option>{% endfor %}
+    </select>
+  </div>
+
+  <div id="reportsList">
+    {% for r in reports %}
+    {% set risk = r.risk_score | float %}
+    <div class="report-card" data-title="{{ r.job_title }}" data-company="{{ r.company_name }}" data-verdict="{{ r.verdict }}">
+      <div class="rc-header" onclick="toggleRC(this)">
+        <div class="rc-left">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ff2d55" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+          <div>
+            <div class="rc-title">{{ r.job_title or 'Unknown Title' }}</div>
+            <div class="rc-company">{{ r.company_name or 'Unknown Company' }}</div>
+          </div>
+        </div>
+        <div class="rc-right">
+          <span class="risk-pill {% if risk>=65 %}risk-high{% elif risk>=35 %}risk-medium{% else %}risk-low{% endif %}">{{ risk }}%</span>
+          <svg class="chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+      </div>
+      <div class="rc-body hidden">
+        <div class="rc-details">
+          <div><span class="dl">Verdict</span> {{ r.verdict }}</div>
+          <div><span class="dl">Email</span> {{ r.contact_email or 'N/A' }}</div>
+          <div><span class="dl">Red Flags</span> {{ r.red_flags_count }}</div>
+          <div><span class="dl">Reported</span> {{ r.reported_at }}</div>
+          <div><span class="dl">Reason</span> {{ r.reported_by_reason or 'N/A' }}</div>
+        </div>
+        <div class="rc-desc">{{ (r.job_description or '')[:300] }}{% if r.job_description and r.job_description|length > 300 %}...{% endif %}</div>
+        <button class="btn-danger-sm" onclick="delReport({{ loop.index0 }}, this.closest('.report-card'))">Delete Report</button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function toggleRC(header){
+  const body=header.nextElementSibling;
+  const icon=header.querySelector('.chevron-icon');
+  body.classList.toggle('hidden');
+  icon.style.transform=body.classList.contains('hidden')?'':'rotate(180deg)';
+}
+function filterReports(){
+  const s=document.getElementById('searchBox').value.toLowerCase();
+  const v=document.getElementById('verdictFilter').value;
+  document.querySelectorAll('.report-card').forEach(c=>{
+    const ok=(!s||(c.dataset.title+c.dataset.company).toLowerCase().includes(s))&&(!v||c.dataset.verdict===v);
+    c.style.display=ok?'':'none';
+  });
+}
+async function delReport(idx,card){
+  if(!confirm('Delete this report?'))return;
+  const r=await fetch(`/api/delete-report/${idx}`,{method:'DELETE'});
+  const d=await r.json();
+  if(d.success)card.remove();
+  else alert('Failed to delete.');
+}
+</script>
+{% endblock %}

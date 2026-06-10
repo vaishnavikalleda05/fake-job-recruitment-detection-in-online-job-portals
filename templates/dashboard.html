@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Dataset Insights{% endblock %}
+{% block head %}<script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>{% endblock %}
+
+{% block content %}
+<div class="page-enter">
+  <div class="page-header">
+    <div class="section-eyebrow">Data Analysis</div>
+    <h1 class="page-title">Dataset <span class="accent-text">Insights</span></h1>
+    <p class="page-sub">Visual breakdown of ~18,000 real and fake job postings from the Kaggle dataset.</p>
+  </div>
+
+  {% if error %}
+  <div class="error-banner" style="display:flex">
+    Dataset not found at <code style="margin:0 6px">data/jobs.csv</code> —
+    <a href="https://www.kaggle.com/datasets/shivamb/real-or-fake-fake-jobposting-prediction" target="_blank" style="color:#00e5ff;margin-left:6px">Download from Kaggle →</a>
+  </div>
+  {% else %}
+  <div class="stats-row" id="summaryStats"></div>
+
+  <div class="two-col">
+    <div class="chart-card"><div class="chart-title">Real vs Fake Distribution</div><div id="pieChart"></div></div>
+    <div class="chart-card"><div class="chart-title">Employment Type Breakdown</div><div id="empChart"></div></div>
+  </div>
+  <div class="chart-card"><div class="chart-title">Description Length — Real vs Fake</div><div id="lenChart"></div></div>
+  <div class="chart-card"><div class="chart-title">Top Industries by Fake Job %</div><div id="indChart"></div></div>
+
+  <script>
+    const C = {{ charts | safe }};
+    const L = bg => ({ paper_bgcolor: bg||"#091422", plot_bgcolor: bg||"#091422", font:{color:"#c8d8f0",family:"Outfit"}, margin:{t:10,b:40,l:40,r:20} });
+
+    document.getElementById("summaryStats").innerHTML = `
+      <div class="stat-card"><div class="stat-num">${C.total.toLocaleString()}</div><div class="stat-lbl">Total Jobs</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#30d158">${C.real.toLocaleString()}</div><div class="stat-lbl">Real Jobs</div></div>
+      <div class="stat-card"><div class="stat-num" style="color:#ff2d55">${C.fake.toLocaleString()}</div><div class="stat-lbl">Fake Jobs</div><div class="stat-sub">${C.fake_pct}%</div></div>
+      <div class="stat-card"><div class="stat-num">${C.report_count}</div><div class="stat-lbl">Reports Filed</div></div>`;
+
+    Plotly.newPlot("pieChart",[{type:"pie",hole:0.5,labels:["Real","Fake"],values:[C.real,C.fake],marker:{colors:["#30d158","#ff2d55"]},textfont:{color:"#fff"}}],{...L(),height:280},{displayModeBar:false});
+
+    if(C.emp_data.length){
+      const types=[...new Set(C.emp_data.map(d=>d.employment_type))].filter(Boolean);
+      Plotly.newPlot("empChart",[
+        {type:"bar",name:"Real",x:types,y:types.map(t=>{const r=C.emp_data.find(d=>d.employment_type===t&&d.fraudulent===0);return r?r.count:0;}),marker:{color:"#30d158"}},
+        {type:"bar",name:"Fake",x:types,y:types.map(t=>{const r=C.emp_data.find(d=>d.employment_type===t&&d.fraudulent===1);return r?r.count:0;}),marker:{color:"#ff2d55"}},
+      ],{...L(),barmode:"group",height:280,legend:{font:{color:"#c8d8f0"}}},{displayModeBar:false});
+    }
+
+    Plotly.newPlot("lenChart",[
+      {type:"histogram",name:"Real",x:C.real_lens,opacity:0.7,marker:{color:"#30d158"},nbinsx:50},
+      {type:"histogram",name:"Fake",x:C.fake_lens,opacity:0.7,marker:{color:"#ff2d55"},nbinsx:50},
+    ],{...L(),barmode:"overlay",height:260,xaxis:{title:"Description Length (chars)"},legend:{font:{color:"#c8d8f0"}}},{displayModeBar:false});
+
+    if(C.ind_data.length){
+      Plotly.newPlot("indChart",[{
+        type:"bar",orientation:"h",
+        x:C.ind_data.map(d=>d.pct),y:C.ind_data.map(d=>d.industry),
+        marker:{color:C.ind_data.map(d=>`rgba(255,45,85,${0.35+d.pct/100*0.65})`)},
+        text:C.ind_data.map(d=>d.pct+"%"),textposition:"outside",
+      }],{...L(),height:360,xaxis:{title:"Fake %"},yaxis:{autorange:"reversed"}},{displayModeBar:false});
+    }
+  </script>
+  {% endif %}
+</div>
+{% endblock %}

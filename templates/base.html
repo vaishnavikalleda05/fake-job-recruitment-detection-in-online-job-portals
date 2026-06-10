@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Fake Recruitment Detection{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  {% block head %}{% endblock %}
+</head>
+<body>
+
+  <div class="grid-bg"></div>
+
+  <aside class="sidebar">
+    <div class="brand">
+      <svg width="34" height="34" viewBox="0 0 36 36" fill="none">
+        <path d="M18 3L5 8v10c0 8.3 5.6 16 13 18 7.4-2 13-9.7 13-18V8L18 3z" fill="url(#sg)" opacity="0.12"/>
+        <path d="M18 3L5 8v10c0 8.3 5.6 16 13 18 7.4-2 13-9.7 13-18V8L18 3z" stroke="url(#sg)" stroke-width="1.5"/>
+        <path d="M12 18l4 4 8-8" stroke="#00e5ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <defs><linearGradient id="sg" x1="5" y1="3" x2="31" y2="31" gradientUnits="userSpaceOnUse"><stop stop-color="#00e5ff"/><stop offset="1" stop-color="#0055cc"/></linearGradient></defs>
+      </svg>
+      <div>
+        <div class="brand-name">FAKE RECRUITMENT</div>
+        <div class="brand-sub">DETECTION SYSTEM</div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/" class="nav-item {% if request.path == '/' %}active{% endif %}">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+        Overview
+      </a>
+      <a href="/analyze" class="nav-item {% if request.path == '/analyze' %}active{% endif %}">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="M11 8v3l2 2"/><line x1="16.5" y1="16.5" x2="21" y2="21"/>
+        </svg>
+        Analyze Job
+      </a>
+      <a href="/dashboard" class="nav-item {% if request.path == '/dashboard' %}active{% endif %}">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
+        </svg>
+        Dataset Insights
+      </a>
+      <a href="/reports" class="nav-item {% if request.path == '/reports' %}active{% endif %}">
+        <svg class="nav-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>
+        </svg>
+        Reported Jobs
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="model-badge {% if model_ready is defined and model_ready %}badge-ok{% else %}badge-err{% endif %}">
+        <span class="badge-dot"></span>
+        {% if model_ready is defined and model_ready %}Model Active{% else %}Model Offline — run train.py{% endif %}
+      </div>
+      <div class="sidebar-credit">Random Forest · NLP · 13 Rules</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Analyze Job{% endblock %}
+
+{% block content %}
+<div class="page-enter">
+
+  <div class="page-header">
+    <div class="section-eyebrow">Paste & Detect</div>
+    <h1 class="page-title">Job Posting <span class="accent-text">Analyzer</span></h1>
+    <p class="page-sub">Paste any job posting below. Our system auto-extracts all details and runs dual-layer detection.</p>
+  </div>
+
+  <div class="analyze-layout">
+
+    <!-- Left: Input -->
+    <div class="input-panel">
+      <label class="field-label">PASTE FULL JOB POSTING</label>
+      <textarea id="jobText" placeholder="Paste any job posting here — email, WhatsApp forward, website copy, PDF text — any format works.
+
+Example:
+─────────────────────────
+Urgent Hiring — Data Entry Operator
+Company: InfoSoft Solutions
+Location: Work From Home | Salary: ₹35,000/month
+No experience needed. Immediate joining.
+
+Job Description:
+We are looking for candidates for data entry work from home.
+Daily targets. Weekly payment. No interview required.
+
+Requirements: Basic computer knowledge. Anyone can apply.
+Contact: hr.infosoft@gmail.com | WhatsApp: 9876543210
+─────────────────────────"></textarea>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="analyzeBtn" onclick="analyzeJob()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/>
+          </svg>
+          <span id="btnText">Run Detection</span>
+          <div class="spinner hidden" id="spinner"></div>
+        </button>
+        <button class="btn-outline" onclick="clearAll()">Clear</button>
+      </div>
+
+      <!-- Threat indicators (always visible) -->
+      <div class="threat-indicators">
+        <div class="ti-label">WHAT WE SCAN FOR</div>
+        <div class="ti-grid">
+          {% for label in ['Free Email Domain','Aadhar/PAN Request','Portal Impersonation','Fake Salary Claims','WhatsApp Contact','No Company Profile','Confidential Info Ask','Missing Requirements'] %}
+          <div class="ti-item">
+            <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="none" stroke="#00e5ff" stroke-width="1.2"/><circle cx="5" cy="5" r="1.8" fill="#00e5ff"/></svg>
+            {{ label }}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Results -->
+    <div class="results-panel">
+
+      <!-- Default state -->
+      <div id="defaultState" class="default-state">
+        <div class="ds-visual">
+          <div class="ds-ring r1"></div>
+          <div class="ds-ring r2"></div>
+          <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#0d2240" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/>
+          </svg>
+        </div>
+        <div class="ds-text">Paste a job posting to begin detection</div>
+        <div class="ds-sub">Results will appear here instantly</div>
+      </div>
+
+      <!-- Results (shown after analysis) -->
+      <div id="results" class="hidden">
+
+        <!-- Extracted chips -->
+        <div class="result-block">
+          <div class="rb-label">EXTRACTED DETAILS</div>
+          <div id="chips" class="chips-row"></div>
+        </div>
+
+        <!-- Verdict -->
+        <div id="verdictBox" class="verdict-box">
+          <div class="verdict-inner">
+            <div id="verdictText" class="verdict-text"></div>
+            <div id="riskPill" class="risk-pill"></div>
+          </div>
+          <!-- Gauge arc -->
+          <div class="gauge-wrap">
+            <svg class="gauge-svg" viewBox="0 0 120 70">
+              <path d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#0d2240" stroke-width="10" stroke-linecap="round"/>
+              <path id="gaugePath" d="M10,65 A55,55 0 0,1 110,65" fill="none" stroke="#00e5ff" stroke-width="10" stroke-linecap="round" stroke-dasharray="173" stroke-dashoffset="173"/>
+            </svg>
+            <div id="gaugeNum" class="gauge-num">0%</div>
+          </div>
+        </div>
+
+        <div class="progress-track"><div class="progress-bar" id="pbar"></div></div>
+        <div id="riskMeta" class="risk-meta"></div>
+
+        <!-- Red Flags -->
+        <div class="result-block">
+          <div class="rb-label">RED FLAGS — <span id="flagCount" class="flag-count-num">0</span> DETECTED</div>
+          <div id="flagsList"></div>
+        </div>
+
+        <!-- Validation -->
+        <div class="result-block">
+          <div class="rb-label">VALIDATION</div>
+          <div class="val-grid">
+            <div class="val-card"><div class="vc-title">Email Domain</div><div id="emailVal"></div></div>
+            <div class="val-card"><div class="vc-title">Salary Check</div><div id="salaryVal"></div></div>
+          </div>
+        </div>
+
+        <!-- Report -->
+        <div class="result-block">
+          <button class="btn-outline-sm" onclick="toggleReport()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            Report This Job
+          </button>
+          <div id="reportPanel" class="report-panel hidden">
+            <input type="text" id="reportReason" class="text-input" placeholder="Reason — e.g. Asked for registration fee, impersonating Naukri"/>
+            <button class="btn-danger" onclick="submitReport()">Submit Report</button>
+            <div id="reportMsg"></div>
+          </div>
+        </div>
+
+      </div><!-- /results -->
+
+      <div id="errorMsg" class="error-banner hidden"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/analyze.js') }}"></script>
+{% endblock %}
