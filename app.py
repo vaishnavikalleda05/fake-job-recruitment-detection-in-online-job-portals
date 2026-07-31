@@ -2,6 +2,13 @@ from flask import Flask, render_template, request, jsonify, send_file
 import pandas as pd
 import os
 import json
+from database.db_config import (
+    save_job,
+    save_prediction,
+    dashboard_stats,
+    get_all_predictions,
+    get_high_risk_jobs
+)
 
 app = Flask(__name__)
 
@@ -76,6 +83,44 @@ def api_analyze():
         "contact_email":       extracted["contact_email"],
     }
 
+    db_job = {
+
+    "company_name": extracted["company_name"],
+
+    "job_title": extracted["title"],
+
+    "location": extracted["location"],
+
+    "salary_range": extracted["salary_range"],
+
+    "employment_type": extracted["employment_type"],
+
+    "required_experience": extracted["experience"],
+
+    "required_education": "",
+
+    "industry": "",
+
+    "company_profile": extracted["company_profile"],
+
+    "job_description": extracted["description"],
+
+    "requirements": extracted["requirements"],
+
+    "benefits": extracted["benefits"],
+
+    "contact_email": extracted["contact_email"],
+
+    "contact_phone": extracted["contact_phone"],
+
+    "has_company_logo": 0,
+
+    "has_questions": 0
+
+    }
+
+    job_id = save_job(db_job)
+    
     # ML prediction
     label, prob = detector.predict_single(job_dict)
     job_dict["_ml_prob"] = prob
@@ -83,6 +128,36 @@ def api_analyze():
     # Rule engine
     from explainer import explain_job
     analysis = explain_job(job_dict)
+
+    prediction_text = analysis["verdict"]
+
+# Convert display text to database enum values
+    if "REAL" in prediction_text.upper():
+        db_prediction = "Real"
+    elif "FAKE" in prediction_text.upper():
+        db_prediction = "Fake"
+    else:
+        db_prediction = "Suspicious"
+
+  
+
+# Save prediction only if the job was stored successfully
+    if job_id is not None:
+        
+
+        result = save_prediction(
+        job_id=job_id,
+        prediction=db_prediction,
+        risk_score=analysis["risk_score"],
+        ml_probability=round(float(prob) * 100, 2),
+        rule_score=analysis["risk_score"]
+        )
+
+       
+
+    else:
+        pass
+
 
     # Email validation
     from validators import validate_email, validate_salary
@@ -147,6 +222,13 @@ def api_report():
 @app.route("/dashboard")
 def dashboard():
     df = get_dataset()
+    try:
+        stats = dashboard_stats()
+        high_risk = get_high_risk_jobs()
+    except Exception as e:
+        print("Database Error:", e)
+        stats = {}
+        high_risk = []
     if df is None:
         return render_template("dashboard.html", error=True, charts={})
 
@@ -193,7 +275,7 @@ def dashboard():
         "report_count": get_report_count(),
     }
 
-    return render_template("dashboard.html", error=False, charts=json.dumps(charts))
+    return render_template("dashboard.html", error=False, charts=json.dumps(charts), sql_stats=stats, high_risk=high_risk)
 
 
 @app.route("/reports")
